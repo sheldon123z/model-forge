@@ -1,97 +1,89 @@
 ---
 description: 从文字描述生成3D模型
-argument-hint: <description> [--domain domain] [--style style] [--quality quality]
+argument-hint: <description> [--domain power_grid|robotics|...] [--style photorealistic|industrial|...] [--quality high|medium|low]
 ---
 
 # Model Forge - 3D 模型生成
 
-从文字描述生成高质量3D模型。
+从文字描述生成完整的3D模型（GLB格式）。
+
+**流程**: 需求描述 → AI Prompt → 图像生成 → 3D模型(doubao-seed3d)
 
 ## 参数
 
-- `$ARGUMENTS` - 对象描述和可选参数
+- `$ARGUMENTS` - 必需参数和可选标志:
+  - 第一个参数: 对象描述（必需）
+  - `--domain` - 行业领域
+  - `--style` - 渲染风格
+  - `--quality` - 模型精度 (high/medium/low)
 
-## 支持的领域 (--domain)
+## 执行代码
 
-| 值 | 说明 |
-|---|------|
-| power_grid | 电力系统 (变压器、断路器、绝缘子) |
-| manufacturing | 制造业 (CNC机床、机械臂) |
-| architecture | 建筑 (建筑模型、室内设计) |
-| automotive | 汽车 (车辆、发动机) |
-| aerospace | 航空航天 (飞机、卫星) |
-| medical | 医疗设备 (手术机器人) |
-| robotics | 机器人 (工业机器人) |
-| furniture | 家具 (办公椅、桌子) |
-| electronics | 电子产品 (消费电子) |
-| general | 通用 (自动检测) |
+```python
+import sys
+import os
+from pathlib import Path
 
-## 支持的风格 (--style)
+# 当前项目即为 model-forge
+from model_forge import ModelForgePipeline, PipelineConfig
+from model_forge.core.prompt_generator import IndustryDomain, RenderStyle
+from dotenv import load_dotenv
 
-| 值 | 说明 |
-|---|------|
-| photorealistic | 照片级真实 |
-| industrial | 工业摄影风格 |
-| product | 产品展示风格 |
-| technical | 技术图纸风格 |
-| artistic | 艺术风格 |
-| minimal | 简约风格 |
+load_dotenv()
 
-## 模型精度 (--quality)
+# 检查环境变量
+gemini_key = os.environ.get("GEMINI_API_KEY")
+ark_key = os.environ.get("ARK_API_KEY")
 
-| 值 | 说明 |
-|---|------|
-| high | 高精度 (~50k面) |
-| medium | 中等精度 (~30k面) |
-| low | 低精度 (~10k面) |
+if not gemini_key or not ark_key:
+    print("错误: 请设置 GEMINI_API_KEY 和 ARK_API_KEY 环境变量")
+else:
+    config = PipelineConfig(
+        gemini_api_key=gemini_key,
+        ark_api_key=ark_key,
+        output_base_dir="./data/3d_models",
+        mesh_quality="high"
+    )
 
-## 执行
+    pipeline = ModelForgePipeline(config)
 
-请按以下步骤执行：
+    # 解析参数 $ARGUMENTS
+    result = pipeline.run(
+        description="$ARGUMENTS",
+        domain=IndustryDomain.POWER_GRID  # 可根据 --domain 参数调整
+    )
 
-1. 检查 `.env` 文件是否存在并配置了 API Key
-2. 解析用户参数
-3. 执行生成命令
-
-```bash
-# 确保在 model-forge 目录
-cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
-
-# 检查环境
-if [ ! -f .env ]; then
-    echo "请先配置 .env 文件: cp .env.example .env"
-    exit 1
-fi
-
-# 执行生成
-model-forge generate $ARGUMENTS
+    print(f"\n生成完成!")
+    print(f"  文件夹: {result.folder_name or result.job_id}")
+    print(f"  领域: {result.detected_domain}")
+    print(f"  图像: {result.image_path}")
+    print(f"  3D模型目录: {result.model_dir}")
 ```
+
+## 支持的领域
+
+| 领域 | 值 | 示例 |
+|------|-----|------|
+| 电力系统 | power_grid | 变压器、断路器 |
+| 机器人 | robotics | 工业机器人 |
+| 制造业 | manufacturing | CNC机床 |
+| 建筑 | architecture | 建筑模型 |
+| 家具 | furniture | 办公椅 |
+| 通用 | general | 自动检测 |
 
 ## 示例
 
 ```bash
 # 电力设备
-/generate 220kV油浸式变压器 --domain power_grid --quality high
+/generate 220kV油浸式变压器
 
 # 机器人
-/generate 一台6轴工业机器人手臂 --style product
+/generate 6轴工业机器人手臂 --domain robotics
 
 # 家具
-/generate 现代简约办公椅 --domain furniture --style minimal
-
-# 自动检测领域
-/generate 一辆红色跑车
+/generate 人体工学办公椅 --domain furniture --style minimal
 ```
 
 ---
 
-如果用户未提供描述，使用 AskUserQuestion 询问：
-1. 要生成的3D对象描述
-2. 行业领域（可选，默认自动检测）
-3. 渲染风格（可选，默认 photorealistic）
-4. 模型精度（可选，默认 medium）
-
-执行完成后报告：
-- 检测到的领域
-- 生成的图像路径
-- 3D模型文件路径
+请根据用户描述 `$ARGUMENTS` 执行生成。如未提供描述，询问用户需要生成什么3D模型。
