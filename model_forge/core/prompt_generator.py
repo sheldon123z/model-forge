@@ -255,6 +255,10 @@ Generate your response in exactly this format:
 ANALYSIS:
 [Your step-by-step reasoning following the chain of thought above]
 
+FOLDER_NAME:
+[A concise folder name in format: {type}_{spec}, use lowercase English with underscores, no spaces.
+ Examples: transformer_220kv, circuit_breaker_sf6, office_chair_mesh, robot_arm_6axis, gis_220kv]
+
 PROMPT:
 [The complete, detailed image generation prompt in English]
 
@@ -460,6 +464,17 @@ VERIFICATION RESULT:"""
         prompt = ""
         negative_prompt = "cartoon, anime, stylized, low quality, blurry, deformed, unrealistic proportions, bad anatomy"
         confidence = "MEDIUM"
+        folder_name = ""
+
+        # 提取 FOLDER_NAME
+        if "FOLDER_NAME:" in result_text:
+            folder_parts = result_text.split("FOLDER_NAME:")
+            if len(folder_parts) > 1:
+                folder_line = folder_parts[1].split("\n")[0].strip()
+                # 清理可能的标点和空格
+                folder_name = folder_line.lower().replace(" ", "_").replace("-", "_")
+                # 移除非法字符
+                folder_name = ''.join(c for c in folder_name if c.isalnum() or c == '_')
 
         # 提取各部分
         if "ANALYSIS:" in result_text:
@@ -501,6 +516,7 @@ VERIFICATION RESULT:"""
             "confidence": confidence,
             "detected_domain": detected_domain.value,
             "style": self.config.style.value,
+            "folder_name": folder_name,
             "raw_response": result_text
         }
 

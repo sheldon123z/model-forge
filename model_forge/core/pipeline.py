@@ -55,6 +55,8 @@ class PipelineResult:
     job_id: str
     stage: PipelineStage
     description: str
+    folder_name: Optional[str] = None
+    display_name: Optional[str] = None
     prompt: Optional[str] = None
     negative_prompt: Optional[str] = None
     analysis: Optional[str] = None
@@ -125,15 +127,16 @@ class ModelForgePipeline:
         Returns:
             流水线结果
         """
-        # 初始化
-        job_id = str(uuid.uuid4())[:8]
-        job_dir = self.config.output_base_dir / job_id
+        # 初始化（使用临时 UUID，后续根据 LLM 生成的 folder_name 重命名）
+        temp_job_id = str(uuid.uuid4())[:8]
+        job_dir = self.config.output_base_dir / temp_job_id
         job_dir.mkdir(parents=True, exist_ok=True)
 
         result = PipelineResult(
-            job_id=job_id,
+            job_id=temp_job_id,
             stage=PipelineStage.INIT,
             description=description,
+            display_name=description[:50],  # 截取前50字符作为显示名
             created_at=datetime.now().isoformat()
         )
 
@@ -173,6 +176,23 @@ class ModelForgePipeline:
                 result.confidence = prompt_result.get("confidence")
                 result.detected_domain = prompt_result["detected_domain"]
                 result.style = prompt_result["style"]
+
+                # 获取 LLM 生成的 folder_name
+                llm_folder_name = prompt_result.get("folder_name", "")
+                if llm_folder_name:
+                    result.folder_name = llm_folder_name
+                    # 检查是否存在冲突，如有则添加短 UUID 后缀
+                    target_dir = self.config.output_base_dir / llm_folder_name
+                    if target_dir.exists():
+                        llm_folder_name = f"{llm_folder_name}_{temp_job_id[:4]}"
+                        target_dir = self.config.output_base_dir / llm_folder_name
+                    result.folder_name = llm_folder_name
+
+                    # 重命名目录
+                    job_dir.rename(target_dir)
+                    job_dir = target_dir
+                    result.job_id = llm_folder_name
+
                 update_progress(
                     PipelineStage.PROMPT_GENERATION,
                     f"提示词生成完成 (领域: {result.detected_domain}, 置信度: {result.confidence})",
@@ -190,6 +210,20 @@ class ModelForgePipeline:
                     "confidence": result.confidence,
                     "detected_domain": result.detected_domain,
                     "style": result.style
+                }, f, ensure_ascii=False, indent=2)
+
+            # 保存 metadata.json
+            metadata_file = job_dir / "metadata.json"
+            with open(metadata_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "display_name": result.display_name,
+                    "folder_name": result.folder_name or result.job_id,
+                    "description": description,
+                    "equipment_type": equipment_type,
+                    "voltage_level": voltage_level,
+                    "domain": result.detected_domain,
+                    "style": result.style,
+                    "created_at": result.created_at
                 }, f, ensure_ascii=False, indent=2)
 
             # 阶段2: 生成图像
