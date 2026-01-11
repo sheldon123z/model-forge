@@ -46,7 +46,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/model-forge.git
+git clone https://github.com/sheldon123z/model-forge.git
 cd model-forge
 
 # 安装依赖

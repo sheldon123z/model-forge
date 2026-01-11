@@ -47,10 +47,10 @@ dev = [
 model-forge = "model_forge.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/your-org/model-forge"
-Documentation = "https://github.com/your-org/model-forge#readme"
-Repository = "https://github.com/your-org/model-forge.git"
-Issues = "https://github.com/your-org/model-forge/issues"
+Homepage = "https://github.com/sheldon123z/model-forge"
+Documentation = "https://github.com/sheldon123z/model-forge#readme"
+Repository = "https://github.com/sheldon123z/model-forge.git"
+Issues = "https://github.com/sheldon123z/model-forge/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
