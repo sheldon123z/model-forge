@@ -15,12 +15,25 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.routes import router as api_router
+from .api.routes_v2 import router as api_router_v2
 
 # 创建 FastAPI 应用
 app = FastAPI(
     title="Model Forge",
-    description="3D模型生成服务 - 从需求描述到3D模型的完整流水线",
-    version="1.0.0",
+    description="""
+    3D模型生成服务 - 从需求描述到3D模型的完整流水线
+
+    ## 功能特性
+    - **多服务商支持**: DeepSeek、豆包、Kimi、智谱GLM、百川、讯飞星火、通义千问、零一万物、OpenRouter等
+    - **联想批量生成**: 输入一个类别，自动生成多种不同样式的物品
+    - **并行批量生成**: 支持多任务并行生成，实时进度追踪
+    - **豆包3D增强**: 支持30k/100k/200k面数精度，GLB/OBJ/USD/USDZ格式
+
+    ## API版本
+    - `/api/v1`: 基础API
+    - `/api/v2`: 扩展API（服务商管理、联想生成、批量生成）
+    """,
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -40,7 +53,8 @@ static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # 注册 API 路由
-app.include_router(api_router)
+app.include_router(api_router)      # /api/v1
+app.include_router(api_router_v2)   # /api/v2
 
 
 # 主页 - 返回前端界面
